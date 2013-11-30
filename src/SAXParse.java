@@ -1,99 +1,75 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
+import java.util.Vector;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.FieldType;
 import org.xml.sax.Attributes;
-import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
+import org.apache.lucene.index.FieldInfo;
+import org.apache.lucene.index.FieldInfo.IndexOptions;
+
 
 public class SAXParse extends DefaultHandler {
-	private StringBuilder elementBuffer = new StringBuilder();
-	private Map<String, String> attributeMap = new HashMap<String, String>();
-	private Document doc;
-	private String dir = "C:\\Users\\Kyle\\Documents\\workspace\\LessBullshitExample\\";
-	private String file = "sampleXML.xml";
-	
-	public SAXParse() {
-		
-	}
-	
-	public void init() {
-		SAXParse handler = new SAXParse();
-		Document doc = null;
-		try {
-			doc = handler.getDocument(
-					new FileInputStream(new File(dir+file)));
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		System.out.println(doc);
-		Indexer indexer = new Indexer();
-		indexer.init(doc);
-	}
 
-	public Document getDocument(InputStream is)
-	// throws DocumentHandlerException
-	{
-		SAXParserFactory spf = SAXParserFactory.newInstance();
-		try {
-			SAXParser parser = spf.newSAXParser();
-			parser.parse(is, this);
-		} catch (Exception e) {
-			// throw new DocumentHandlerException(
-			// "Cannot parse XML document", e);
-		}
-		return doc;
-	}
+        private String startTag;
+        private Vector<Document> documents;
+        private Document doc;
+        
+        public SAXParse() {
+                documents = new Vector<Document>();
+        }
+        
+        public Vector<Document> getDoc()
+        {
+                return documents;
+        }
 
-	public void startDocument() {
-		doc = new Document();
-	}
+        @Override
+        public void characters(char[] ch, int start, int length)
+                        throws SAXException {
+                String printS = "";
+            int i = start;
+            while (i < start + length) {
+                    if(ch[i] != 10 && ch[i] != 32)
+                            printS += ch[i];
+                    i++;
+                }
+            printS.trim();
+            if(printS.length()>0){
+                    //System.out.print(" | tag:" + startTag + ": " + printS);
+            	FieldType fieldType = new FieldType();
+            	fieldType.setStored(true);
+            	fieldType.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
+                doc.add(new Field(startTag, printS, fieldType));
+            }
+        }
 
-	public void startElement(String uri, String localName, String qName,
-			Attributes atts) throws SAXException {
+        @Override
+        public void startElement(String uri, String localName, String qName,
+                        Attributes attributes) throws SAXException {
+        	if(localName.equals("article")){
+        		doc = new Document();
+        	}
+                super.startElement(uri, localName, qName, attributes);
+                startTag = localName;
+        }
+        
+     
 
-		elementBuffer.setLength(0);
-		attributeMap.clear();
-		int numAtts = atts.getLength();
-		if (numAtts > 0) {
-			for (int i = 0; i < numAtts; i++) {
-				attributeMap.put(atts.getQName(i), atts.getValue(i));
+        @Override
+		public void endElement(String uri, String localName, String qName)
+				throws SAXException {
+			// TODO Auto-generated method stub
+			super.endElement(uri, localName, qName);
+			if(localName.equals("article")) {
+				documents.add(doc);
+				doc = null;
 			}
 		}
-	}
 
-	public void characters(char[] text, int start, int length) {
-		elementBuffer.append(text, start, length);
-	}
-
-	public void endElement(String uri, String localName, String qName)
-			throws SAXException {
-		if (qName.equals("address-book")) {
-			return;
-		} else if (qName.equals("contact")) {
-			for (Entry<String, String> attribute : attributeMap.entrySet()) {
-				String attName = attribute.getKey();
-				String attValue = attribute.getValue();
-				doc.add(new Field(attName, attValue, Field.Store.YES,
-						Field.Index.NOT_ANALYZED));
-			}
-		} else {
-			doc.add(new Field(qName, elementBuffer.toString(), Field.Store.YES,
-					Field.Index.NOT_ANALYZED));
-		}
-	}
+		public void clearDoc() {
+                doc = new Document();
+        }
 
 }
