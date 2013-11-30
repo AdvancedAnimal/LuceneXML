@@ -37,11 +37,11 @@ public class SAXParse extends DefaultHandler {
                 }
             printS.trim();
             if(printS.length()>0){
-                    System.out.print(" | tag:" + startTag + ": " + printS);
-            	FieldType fieldType = new FieldType();
-            	fieldType.setStored(true);
-            	fieldType.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
-                doc.add(new Field(startTag, printS, fieldType));
+                    System.out.print(" | tag:" + startTag + ": " + printS + "\n");
+            	//FieldType fieldType = new FieldType();
+            	//fieldType.setStored(true);
+            	//fieldType.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
+                doc.add(new Field(startTag, printS, Field.Store.YES, Field.Index.ANALYZED));
             }
         }
 
@@ -69,7 +69,7 @@ public class SAXParse extends DefaultHandler {
 		}
 
 		public void clearDoc() {
-                doc = new Document();
+                documents = new Vector<Document>();
         }
 
 }
