@@ -23,9 +23,16 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.FieldInfo;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
@@ -75,7 +82,7 @@ public class ProgramStart {
 						FieldType fieldType = new FieldType();
 		            	fieldType.setStored(true);
 		            	fieldType.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
-		                doc.add(new Field("Filename", xmlDocs.get(j).getPath(), fieldType));
+		                doc.add(new Field("$$$Filename", xmlDocs.get(j).getPath(), fieldType));
 		                docList.add(doc);
 					}
 				}
@@ -88,7 +95,35 @@ public class ProgramStart {
 			for(int x = 0; x < docList.size(); x++) {
 				indexWriter.addDocument(docList.get(x));
 			}
+			
 			indexWriter.close();
+			
+			IndexSearcher searcher = new IndexSearcher(DirectoryReader.open(directory));
+			String element = "";
+			do{
+				System.out.println("Enter tag (press q to quit)");
+				element = keyboard.readLine();
+				if(!element.equalsIgnoreCase("Q")) {
+					System.out.println("Enter value: ");
+					String value = keyboard.readLine();
+					System.out.println("Searching for " + element + ": " + value);
+					
+					Query query = new QueryParser(Version.LUCENE_46, element, analyzer).parse(value);
+					TopScoreDocCollector collector = TopScoreDocCollector.create(10, true);
+					searcher.search(query, collector);
+					ScoreDoc[] hits = collector.topDocs().scoreDocs;
+					
+					System.out.println("Found " + hits.length + " hits.");
+					for(int h = 0; h < hits.length; h++) {
+						int id = hits[h].doc;
+						Document de = searcher.doc(id);
+						System.out.println((h+1 + ". " + de.get("$$$FileName")));
+					}
+					
+				}
+			}
+			while(!element.equalsIgnoreCase("Q"));
+			
 			
 			
 			

@@ -37,7 +37,7 @@ public class SAXParse extends DefaultHandler {
                 }
             printS.trim();
             if(printS.length()>0){
-                    //System.out.print(" | tag:" + startTag + ": " + printS);
+                    System.out.print(" | tag:" + startTag + ": " + printS);
             	FieldType fieldType = new FieldType();
             	fieldType.setStored(true);
             	fieldType.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
