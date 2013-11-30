@@ -23,9 +23,17 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
+import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.FieldInfo;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
@@ -71,11 +79,12 @@ public class ProgramStart {
 				for(int j = 0; j < xmlDocs.size(); j++) {
 					xmlReader.parse(new InputSource(new FileReader(xmlDocs.get(j))));
 					Vector<Document> docs = parseToIndex.getDoc();
+					parseToIndex.clearDoc();
 					for(Document doc : docs){
-						FieldType fieldType = new FieldType();
-		            	fieldType.setStored(true);
-		            	fieldType.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
-		                doc.add(new Field("Filename", xmlDocs.get(j).getPath(), fieldType));
+						//FieldType fieldType = new FieldType();
+		            	//fieldType.setStored(true);
+		            	//fieldType.setIndexOptions(FieldInfo.IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
+		                doc.add(new Field("$$$FileName", xmlDocs.get(j).getPath(),Field.Store.YES, Field.Index.ANALYZED));
 		                docList.add(doc);
 					}
 				}
@@ -85,10 +94,47 @@ public class ProgramStart {
 			StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_46);
 			IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_46, analyzer);
 			IndexWriter indexWriter = new IndexWriter(directory, config);
+			//Document doc = new Document();
+			//String text = "This is the text to be indexed.";
+			//doc.add(new Field("fieldname", text, TextField.TYPE_STORED));
 			for(int x = 0; x < docList.size(); x++) {
 				indexWriter.addDocument(docList.get(x));
+				System.out.println("Indexing " + x);
 			}
+			
+			//
+			//indexWriter.addDocument(doc);
+			//
+			
 			indexWriter.close();
+			DirectoryReader dirRead = DirectoryReader.open(directory);
+			IndexSearcher searcher = new IndexSearcher(dirRead);
+			String element = "";
+			do{
+				System.out.println("Enter tag (press q to quit)");
+				element = keyboard.readLine();
+				if(!element.equalsIgnoreCase("Q")) {
+					System.out.println("Enter value: ");
+					String value = keyboard.readLine();
+					System.out.println("Searching for " + element + ": " + value);
+					
+					Query query = new QueryParser(Version.LUCENE_46, element, analyzer).parse(value);
+					ScoreDoc[] hits = searcher.search(query, null, 10).scoreDocs;
+					//TopScoreDocCollector collector = TopScoreDocCollector.create(10, true);
+					//searcher.search(query, collector);
+					//ScoreDoc[] hits = collector.topDocs().scoreDocs;
+					
+					System.out.println("Found " + hits.length + " hits.");
+					for(int h = 0; h < hits.length; h++) {
+						int id = hits[h].doc;
+						Document de = searcher.doc(id);
+						System.out.println((h+1 + ". " + de.get("$$$FileName")));
+					}
+					
+				}
+			}
+			while(!element.equalsIgnoreCase("Q"));
+			
 			
 			
 			
